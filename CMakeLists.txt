@@ -22,6 +22,7 @@ set(SOURCES
     src/SubstitutionBreaker.cpp
     src/VigenereBreaker.cpp
     src/LanguageDetector.cpp
+    src/AutoCipherDetector.cpp
 )
 
 # Header files
@@ -30,6 +31,7 @@ set(HEADERS
     include/FrequencyAnalyzer.h
     include/CipherBreaker.h
     include/LanguageDetector.h
+    include/AutoCipherDetector.h
 )
 
 # Executable
@@ -55,6 +57,7 @@ set(TEST_SOURCES
     src/SubstitutionBreaker.cpp
     src/VigenereBreaker.cpp
     src/LanguageDetector.cpp
+    src/AutoCipherDetector.cpp
 )
 
 add_executable(run_tests ${TEST_SOURCES})

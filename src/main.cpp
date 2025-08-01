@@ -10,6 +10,7 @@
 #include "CaesarBreaker.h"
 #include "SubstitutionBreaker.h"
 #include "VigenereBreaker.h"
+#include "AutoCipherDetector.h"
 
 // All cipher breakers now implemented!
 
@@ -23,12 +24,13 @@ void displayMainMenu() {
     std::cout << "1. Caesar Cipher Breaking" << std::endl;
     std::cout << "2. Substitution Cipher Breaking" << std::endl;
     std::cout << "3. Vigenère Cipher Breaking" << std::endl;
-    std::cout << "4. Frequency Analysis Only" << std::endl;
-    std::cout << "5. Batch File Processing" << std::endl;
-    std::cout << "6. Help" << std::endl;
-    std::cout << "7. Exit" << std::endl;
+    std::cout << "4. Automatic Cipher Detection & Breaking" << std::endl;
+    std::cout << "5. Frequency Analysis Only" << std::endl;
+    std::cout << "6. Batch File Processing" << std::endl;
+    std::cout << "7. Help" << std::endl;
+    std::cout << "8. Exit" << std::endl;
     std::cout << "========================================" << std::endl;
-    std::cout << "Enter your choice (1-7): ";
+    std::cout << "Enter your choice (1-8): ";
 }
 
 /**
@@ -481,6 +483,106 @@ void handleVigenereBreaking() {
 }
 
 /**
+ * @brief Handles automatic cipher detection and breaking
+ */
+void handleAutomaticCipherDetection() {
+    std::cout << "\n=== Automatic Cipher Detection & Breaking ===" << std::endl;
+    std::cout << "Intelligent analysis to detect cipher type and automatically break it." << std::endl;
+    
+    std::string input = getUserInput();
+    if (!Utils::isValidInput(input)) {
+        std::cout << "Invalid input. Please provide text with sufficient alphabetic characters." << std::endl;
+        return;
+    }
+    
+    // Create auto detector
+    AutoCipherDetector detector;
+    
+    std::cout << "\nAnalyzing cipher type..." << std::endl;
+    auto detection = detector.detectCipherType(input);
+    
+    // Display detection results
+    std::cout << "\n=== Cipher Detection Results ===" << std::endl;
+    std::cout << "Detected Type: " << detection.cipherType << std::endl;
+    std::cout << "Confidence: " << std::fixed << std::setprecision(1) 
+              << (detection.confidence * 100) << "%" << std::endl;
+    std::cout << "Reasoning: " << detection.reasoning << std::endl;
+    
+    // Show all scores
+    std::cout << "\nAll Cipher Type Scores:" << std::endl;
+    for (const auto& score : detection.scores) {
+        std::cout << "  " << score.first << ": " 
+                  << std::fixed << std::setprecision(3) << score.second << std::endl;
+    }
+    
+    // If we detected a cipher type, offer to break it
+    if (detection.cipherType != "unknown" && detection.cipherType != "plaintext" && detection.confidence > 0.3) {
+        std::cout << "\nWould you like to attempt breaking this " << detection.cipherType 
+                  << " cipher? (y/n): ";
+        char breakChoice;
+        std::cin >> breakChoice;
+        std::cin.ignore();
+        
+        if (breakChoice == 'y' || breakChoice == 'Y') {
+            std::cout << "\nAttempting to break " << detection.cipherType << " cipher..." << std::endl;
+            
+            // Create appropriate cipher breaker
+            auto cipherBreaker = createCipherBreaker(detection.cipherType);
+            if (cipherBreaker) {
+                // Enable verbose for auto-detected ciphers
+                cipherBreaker->setVerbose(true);
+                
+                auto start = std::chrono::high_resolution_clock::now();
+                std::string result = cipherBreaker->breakCipher(input);
+                auto end = std::chrono::high_resolution_clock::now();
+                
+                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+                
+                std::cout << "\n=== Cipher Breaking Results ===" << std::endl;
+                std::cout << "Analysis time: " << duration.count() << " ms" << std::endl;
+                std::cout << "Breaking confidence: " << std::fixed << std::setprecision(1) 
+                          << cipherBreaker->getConfidence() << "%" << std::endl;
+                
+                if (!result.empty()) {
+                    std::cout << "\nDecrypted text:" << std::endl;
+                    std::cout << "\"" << result << "\"" << std::endl;
+                    
+                    // Ask if user wants to save result
+                    std::cout << "\nSave result to file? (y/n): ";
+                    char save;
+                    std::cin >> save;
+                    std::cin.ignore();
+                    
+                    if (save == 'y' || save == 'Y') {
+                        std::cout << "Enter filename: ";
+                        std::string filename;
+                        std::getline(std::cin, filename);
+                        
+                        if (Utils::writeFile(filename, result)) {
+                            std::cout << "Result saved to " << filename << std::endl;
+                        } else {
+                            std::cout << "Error saving file." << std::endl;
+                        }
+                    }
+                } else {
+                    std::cout << "\nCould not successfully break the cipher." << std::endl;
+                    std::cout << "You may want to try the specific cipher breaking methods manually." << std::endl;
+                }
+            } else {
+                std::cout << "Error: Could not create cipher breaker for " << detection.cipherType << std::endl;
+            }
+        }
+    } else if (detection.cipherType == "plaintext") {
+        std::cout << "\nThe text appears to already be in plaintext (not encrypted)." << std::endl;
+    } else {
+        std::cout << "\nCould not reliably detect cipher type. You may want to:" << std::endl;
+        std::cout << "- Try the specific cipher breaking methods manually" << std::endl;
+        std::cout << "- Ensure the text is long enough for analysis (50+ characters recommended)" << std::endl;
+        std::cout << "- Check that the text contains mostly alphabetic characters" << std::endl;
+    }
+}
+
+/**
  * @brief Handles batch file processing
  */
 void handleBatchProcessing() {
@@ -549,7 +651,10 @@ int main() {
             case 3:
                 handleVigenereBreaking();
                 break;
-            case 4: {
+            case 4:
+                handleAutomaticCipherDetection();
+                break;
+            case 5: {
                 std::string input = getUserInput();
                 if (Utils::isValidInput(input)) {
                     performFrequencyAnalysis(input);
@@ -558,26 +663,26 @@ int main() {
                 }
                 break;
             }
-            case 5:
+            case 6:
                 handleBatchProcessing();
                 break;
-            case 6:
+            case 7:
                 displayHelp();
                 break;
-            case 7:
+            case 8:
                 std::cout << "\nThank you for using CryptoBreaker!" << std::endl;
                 break;
             default:
-                std::cout << "Invalid choice. Please select 1-7." << std::endl;
+                std::cout << "Invalid choice. Please select 1-8." << std::endl;
                 break;
         }
         
-        if (choice != 7) {
+        if (choice != 8) {
             std::cout << "\nPress Enter to continue...";
             std::cin.get();
         }
         
-    } while (choice != 7);
+    } while (choice != 8);
     
     return 0;
 }
