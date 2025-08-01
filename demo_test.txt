@@ -1,0 +1,34 @@
+# CryptoBreaker Demo Test Samples
+
+## Caesar Cipher Example (Key: 3)
+### Ciphertext:
+WKH TXLFN EURZQ IRA MXPSV RYHU WKH ODCB GRJ
+
+### Expected Plaintext:
+THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG
+
+## Substitution Cipher Example
+### Ciphertext:
+WKH TXLFN EURZQ IRA MXPSV RYHU WKH ODCB GRJ WKLV LV D WHVW PHVVDJH IRU VXEVWLWXWLRQ FLSKHU DQDOBVLV
+
+### Expected Pattern:
+Complex substitution pattern requiring frequency analysis
+
+## Vigenère Cipher Example (Key: CRYPTO)
+### Ciphertext:
+VWP JGSNG DGUZR MAK LWQXL YBTK FWT XEEE SYT
+
+### Expected Key:
+CRYPTO
+
+## Test Commands:
+1. Run: ./cryptobreaker
+2. Choose option 4 (Automatic Detection)
+3. Copy any ciphertext above
+4. Observe automatic detection and breaking
+
+## Expected Results:
+- Caesar: Should detect as "caesar" with high confidence
+- Substitution: Should detect as "substitution" 
+- Vigenère: Should detect as "vigenere" with moderate confidence
+- All should successfully break with reasonable accuracy
