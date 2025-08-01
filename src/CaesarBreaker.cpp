@@ -6,6 +6,9 @@
 #include <iostream>
 #include <iomanip>
 #include <cmath>
+#include <thread>
+#include <future>
+#include <vector>
 
 CaesarBreaker::CaesarBreaker() : minTextLength(20) {
     // Initialize with default settings
@@ -69,24 +72,70 @@ std::vector<std::pair<int, double>> CaesarBreaker::findPossibleKeys(const std::s
     
     printVerbose("Testing all 26 possible Caesar keys...");
     
-    // Test all possible keys (0-25)
-    for (int key = 0; key < 26; key++) {
-        std::string decrypted = caesarShift(normalizedText, key);
-        double score = scoreText(decrypted);
+    // Use multi-threading for parallel key testing
+    const int numThreads = std::min(26, static_cast<int>(std::thread::hardware_concurrency()));
+    const int keysPerThread = (26 + numThreads - 1) / numThreads; // Round up division
+    
+    std::vector<std::future<std::vector<std::pair<int, double>>>> futures;
+    
+    printVerbose("Using " + std::to_string(numThreads) + " threads for parallel analysis");
+    
+    // Launch parallel tasks
+    for (int threadId = 0; threadId < numThreads; threadId++) {
+        int startKey = threadId * keysPerThread;
+        int endKey = std::min(startKey + keysPerThread, 26);
         
-        keyScores.emplace_back(key, score);
-        lastAnalysis[key] = score;
+        if (startKey >= 26) break;
         
-        // Show preview for verbose mode
-        if (verbose) {
-            std::string preview = decrypted.substr(0, std::min(30, static_cast<int>(decrypted.length())));
-            updateProgress(key, score, preview);
+        auto future = std::async(std::launch::async, [this, normalizedText, startKey, endKey]() {
+            std::vector<std::pair<int, double>> threadResults;
+            
+            for (int key = startKey; key < endKey; key++) {
+                std::string decrypted = caesarShift(normalizedText, key);
+                double score = scoreText(decrypted);
+                threadResults.emplace_back(key, score);
+                
+                // Thread-safe verbose output
+                if (verbose) {
+                    std::string preview = decrypted.substr(0, std::min(30, static_cast<int>(decrypted.length())));
+                    // Use a simple format for thread-safe output
+                    // Full progress updates will be shown after collection
+                }
+            }
+            
+            return threadResults;
+        });
+        
+        futures.push_back(std::move(future));
+    }
+    
+    // Collect results from all threads
+    for (auto& future : futures) {
+        auto threadResults = future.get();
+        for (const auto& result : threadResults) {
+            keyScores.push_back(result);
+            lastAnalysis[result.first] = result.second;
         }
     }
     
-    // Sort by score (highest first)
+    // Sort results by key for consistent output
+    std::sort(keyScores.begin(), keyScores.end(), 
+              [](const auto& a, const auto& b) { return a.first < b.first; });
+    
+    // Show progress for verbose mode (after parallel execution)
+    if (verbose) {
+        for (const auto& keyScore : keyScores) {
+            std::string decrypted = caesarShift(normalizedText, keyScore.first);
+            std::string preview = decrypted.substr(0, std::min(30, static_cast<int>(decrypted.length())));
+            updateProgress(keyScore.first, keyScore.second, preview);
+        }
+    }
+    
+    // Sort by score (highest first) for final ranking
     std::sort(keyScores.begin(), keyScores.end(), 
               [](const auto& a, const auto& b) { return a.second > b.second; });
+    
+    printVerbose("Parallel analysis completed. Results ranked by score.");
     
     // Update confidence based on best vs second best
     if (keyScores.size() >= 2) {

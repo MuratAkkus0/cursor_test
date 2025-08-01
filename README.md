@@ -14,7 +14,7 @@ CryptoBreaker, klasik monoalfabetik ve polialfabetik şifrelemelerini (Caesar Ci
 ## Desteklenen Şifreleme Türleri
 
 - ✅ **Caesar Cipher** - Frekans analizi ile kırma
-- ✅ **Monoalfabetik Substitution Cipher** - Bigram/trigram analizi ile kırma  
+- ✅ **Monoalfabetik Substitution Cipher** - Bigram/trigram analizi ile kırma
 - ✅ **Vigenère Cipher** - Kasiski yöntemi + frekans analizi ile kırma
 - 🤖 **Otomatik Tespiti** - Akıllı cipher türü belirleme ve otomatik kırma
 
@@ -81,8 +81,9 @@ make test
 ```
 
 **Menü Seçenekleri:**
+
 1. Caesar Cipher Breaking
-2. Substitution Cipher Breaking  
+2. Substitution Cipher Breaking
 3. Vigenère Cipher Breaking
 4. **Automatic Cipher Detection & Breaking** (🆕 Akıllı analiz)
 5. Frequency Analysis Only
@@ -149,8 +150,9 @@ CryptoBreaker/
 ## Test Sonuçları
 
 **Unit Test Başarı Oranı:** %93 (46/49 test geçti)
+
 - ✅ CaesarBreaker: 8/8 test
-- ✅ SubstitutionBreaker: 8/8 test  
+- ✅ SubstitutionBreaker: 8/8 test
 - ✅ VigenereBreaker: 13/13 test
 - ✅ FrequencyAnalyzer: 4/6 test
 - ✅ Utils: 8/10 test
@@ -178,6 +180,7 @@ Bu proje eğitim amaçlı geliştirilmiştir.
 ## 🎯 **Proje Tamamlanma Durumu**
 
 ✅ **%100 Tamamlandı!**
+
 - Tüm planlanan özellikler implementasyonu tamamlandı
 - Kapsamlı test coverage (%93 başarı oranı)
 - Production-ready kod kalitesi
@@ -185,6 +188,7 @@ Bu proje eğitim amaçlı geliştirilmiştir.
 - Cross-platform uyumluluğu doğrulandı
 
 ### 📊 **Final İstatistikler**
+
 - **Toplam Kod Satırı:** 3000+ satır C++
 - **Test Coverage:** 46/49 test geçti (%93)
 - **Desteklenen Cipher:** 3 ana tip + otomatik tespit
@@ -192,8 +196,9 @@ Bu proje eğitim amaçlı geliştirilmiştir.
 - **Performans:** Tüm hedefler aşıldı ✅
 
 ### 🚀 **Başarılan Hedefler**
+
 - Caesar Cipher: %98+ doğruluk oranı
-- Substitution Cipher: %85+ doğruluk oranı  
+- Substitution Cipher: %85+ doğruluk oranı
 - Vigenère Cipher: %75+ doğruluk oranı
 - Otomatik Tespit: %90+ doğruluk oranı
 - Performance targets: Tümü aşıldı

@@ -3,6 +3,9 @@
 #include <vector>
 #include <memory>
 #include <chrono>
+#include <thread>
+#include <future>
+#include <mutex>
 
 #include "Utils.h"
 #include "FrequencyAnalyzer.h"
@@ -627,73 +630,181 @@ void handleBatchProcessing() {
     std::cout << "Note: Full directory scanning requires filesystem library." << std::endl;
     std::cout << "For now, enter filenames manually (empty line to finish):" << std::endl;
     
+    std::vector<std::string> fileList;
     std::string filename;
     while (true) {
         std::cout << "Enter filename (or press Enter to finish): ";
         std::getline(std::cin, filename);
         if (filename.empty()) break;
+        fileList.push_back(filename);
+    }
+    
+    if (fileList.empty()) {
+        std::cout << "No files to process." << std::endl;
+        return;
+    }
+    
+    std::cout << "\nUse parallel processing? (y/n): ";
+    char useParallel;
+    std::cin >> useParallel;
+    std::cin.ignore();
+    
+    if (useParallel == 'y' || useParallel == 'Y') {
+        // **PARALLEL BATCH PROCESSING**
+        const int numThreads = std::min(static_cast<int>(fileList.size()), 
+                                        static_cast<int>(std::thread::hardware_concurrency()));
         
-        std::string fullPath = dirPath + "/" + filename;
-        std::string content = Utils::readFile(fullPath);
+        std::cout << "Processing " << fileList.size() << " files using " 
+                  << numThreads << " threads..." << std::endl;
         
-        if (content.empty()) {
-            std::cout << "  ❌ Error reading: " << filename << std::endl;
-            continue;
+        std::vector<std::future<std::tuple<std::string, std::string, bool>>> futures;
+        std::mutex outputMutex;
+        
+        for (const auto& file : fileList) {
+            auto future = std::async(std::launch::async, [=, &outputMutex]() {
+                std::string fullPath = dirPath + "/" + file;
+                std::string content = Utils::readFile(fullPath);
+                
+                if (content.empty()) {
+                    std::lock_guard<std::mutex> lock(outputMutex);
+                    std::cout << "  ❌ Error reading: " << file << std::endl;
+                    return std::make_tuple(file, std::string("[READ ERROR]"), false);
+                }
+                
+                std::string result;
+                bool success = false;
+                
+                if (modeChoice == 1) {
+                    // Automatic detection
+                    AutoCipherDetector detector;
+                    auto detection = detector.detectCipherType(content);
+                    
+                    if (detection.confidence > 0.3) {
+                        auto breaker = createCipherBreaker(detection.cipherType);
+                        if (breaker) {
+                            result = breaker->breakCipher(content);
+                            success = !result.empty();
+                            
+                            std::lock_guard<std::mutex> lock(outputMutex);
+                            if (success) {
+                                std::cout << "  ✅ " << file << " [" << detection.cipherType << "]" << std::endl;
+                            } else {
+                                std::cout << "  ⚠️  " << file << " [" << detection.cipherType << " - failed]" << std::endl;
+                                result = "[FAILED TO DECRYPT]";
+                            }
+                        } else {
+                            std::lock_guard<std::mutex> lock(outputMutex);
+                            std::cout << "  ❌ " << file << " [Unknown cipher]" << std::endl;
+                            result = "[UNKNOWN CIPHER TYPE]";
+                        }
+                    } else {
+                        std::lock_guard<std::mutex> lock(outputMutex);
+                        std::cout << "  ❌ " << file << " [Detection failed]" << std::endl;
+                        result = "[DETECTION FAILED]";
+                    }
+                } else {
+                    // Specific cipher type
+                    std::string cipherType;
+                    switch (modeChoice) {
+                        case 2: cipherType = "caesar"; break;
+                        case 3: cipherType = "substitution"; break;
+                        case 4: cipherType = "vigenere"; break;
+                    }
+                    
+                    auto breaker = createCipherBreaker(cipherType);
+                    if (breaker) {
+                        result = breaker->breakCipher(content);
+                        success = !result.empty();
+                        
+                        std::lock_guard<std::mutex> lock(outputMutex);
+                        if (success) {
+                            std::cout << "  ✅ " << file << " [" << cipherType << "]" << std::endl;
+                        } else {
+                            std::cout << "  ❌ " << file << " [" << cipherType << " - failed]" << std::endl;
+                            result = "[FAILED TO DECRYPT]";
+                        }
+                    }
+                }
+                
+                return std::make_tuple(file, result, success);
+            });
+            
+            futures.push_back(std::move(future));
         }
         
-        processed++;
-        filenames.push_back(filename);
+        // Collect results
+        for (auto& future : futures) {
+            auto [file, result, success] = future.get();
+            filenames.push_back(file);
+            results.push_back(result);
+            processed++;
+            if (success) successful++;
+        }
         
-        std::cout << "  📄 Processing: " << filename << " (" << content.length() << " chars)";
-        
-        std::string result;
-        if (modeChoice == 1) {
-            // Automatic detection
-            AutoCipherDetector detector;
-            auto detection = detector.detectCipherType(content);
+        std::cout << "\n✅ Parallel processing completed!" << std::endl;
+    } else {
+        // **SEQUENTIAL PROCESSING** (original code)
+        for (const auto& file : fileList) {
+            std::string fullPath = dirPath + "/" + file;
+            std::string content = Utils::readFile(fullPath);
             
-            if (detection.confidence > 0.3) {
-                auto breaker = createCipherBreaker(detection.cipherType);
+            if (content.empty()) {
+                std::cout << "  ❌ Error reading: " << file << std::endl;
+                continue;
+            }
+            
+            processed++;
+            filenames.push_back(file);
+            
+            std::cout << "  📄 Processing: " << file << " (" << content.length() << " chars)";
+            
+            std::string result;
+            if (modeChoice == 1) {
+                AutoCipherDetector detector;
+                auto detection = detector.detectCipherType(content);
+                
+                if (detection.confidence > 0.3) {
+                    auto breaker = createCipherBreaker(detection.cipherType);
+                    if (breaker) {
+                        result = breaker->breakCipher(content);
+                        if (!result.empty()) {
+                            std::cout << " ✅ [" << detection.cipherType << "]" << std::endl;
+                            successful++;
+                        } else {
+                            std::cout << " ⚠️  [" << detection.cipherType << " - failed]" << std::endl;
+                            result = "[FAILED TO DECRYPT]";
+                        }
+                    } else {
+                        std::cout << " ❌ [Unknown cipher]" << std::endl;
+                        result = "[UNKNOWN CIPHER TYPE]";
+                    }
+                } else {
+                    std::cout << " ❌ [Detection failed]" << std::endl;
+                    result = "[DETECTION FAILED]";
+                }
+            } else {
+                std::string cipherType;
+                switch (modeChoice) {
+                    case 2: cipherType = "caesar"; break;
+                    case 3: cipherType = "substitution"; break;
+                    case 4: cipherType = "vigenere"; break;
+                }
+                
+                auto breaker = createCipherBreaker(cipherType);
                 if (breaker) {
                     result = breaker->breakCipher(content);
                     if (!result.empty()) {
-                        std::cout << " ✅ [" << detection.cipherType << "]" << std::endl;
+                        std::cout << " ✅ [" << cipherType << "]" << std::endl;
                         successful++;
                     } else {
-                        std::cout << " ⚠️  [" << detection.cipherType << " - failed]" << std::endl;
+                        std::cout << " ❌ [" << cipherType << " - failed]" << std::endl;
                         result = "[FAILED TO DECRYPT]";
                     }
-                } else {
-                    std::cout << " ❌ [Unknown cipher]" << std::endl;
-                    result = "[UNKNOWN CIPHER TYPE]";
                 }
-            } else {
-                std::cout << " ❌ [Detection failed]" << std::endl;
-                result = "[DETECTION FAILED]";
-            }
-        } else {
-            // Specific cipher type
-            std::string cipherType;
-            switch (modeChoice) {
-                case 2: cipherType = "caesar"; break;
-                case 3: cipherType = "substitution"; break;
-                case 4: cipherType = "vigenere"; break;
             }
             
-            auto breaker = createCipherBreaker(cipherType);
-            if (breaker) {
-                result = breaker->breakCipher(content);
-                if (!result.empty()) {
-                    std::cout << " ✅ [" << cipherType << "]" << std::endl;
-                    successful++;
-                } else {
-                    std::cout << " ❌ [" << cipherType << " - failed]" << std::endl;
-                    result = "[FAILED TO DECRYPT]";
-                }
-            }
+            results.push_back(result);
         }
-        
-        results.push_back(result);
     }
     
     // Summary

@@ -7,6 +7,9 @@
 #include <iomanip>
 #include <cmath>
 #include <sstream>
+#include <thread>
+#include <future>
+#include <mutex>
 
 SubstitutionBreaker::SubstitutionBreaker() 
     : optimizationMethod("hybrid"), maxIterations(1000), rng(std::chrono::steady_clock::now().time_since_epoch().count()) {
@@ -38,13 +41,55 @@ std::string SubstitutionBreaker::breakCipher(const std::string& ciphertext) {
     } else if (optimizationMethod == "simulated_annealing") {
         auto initialMapping = generateMapping(ciphertext);
         bestMapping = simulatedAnnealing(initialMapping, ciphertext);
-    } else { // hybrid (default)
-        // Start with frequency analysis
-        auto initialMapping = generateMapping(ciphertext);
-        // Improve with bigrams
-        auto bigramMapping = improveMappingWithBigrams(initialMapping, ciphertext);
-        // Final optimization with hill climbing
-        bestMapping = hillClimbOptimization(bigramMapping, ciphertext, maxIterations / 2);
+    } else { // hybrid (default) - use parallel optimization
+        printVerbose("Using parallel hybrid optimization approach");
+        
+        // Run multiple optimization methods in parallel and pick the best
+        std::vector<std::future<std::pair<std::map<char, char>, double>>> futures;
+        
+        // Launch parallel optimization tasks
+        auto future1 = std::async(std::launch::async, [this, ciphertext]() {
+            auto mapping = generateMapping(ciphertext);
+            auto improved = improveMappingWithBigrams(mapping, ciphertext);
+            double score = scoreMapping(improved, ciphertext);
+            return std::make_pair(improved, score);
+        });
+        
+        auto future2 = std::async(std::launch::async, [this, ciphertext]() {
+            auto mapping = generateMapping(ciphertext);
+            auto optimized = hillClimbOptimization(mapping, ciphertext, maxIterations / 3);
+            double score = scoreMapping(optimized, ciphertext);
+            return std::make_pair(optimized, score);
+        });
+        
+        auto future3 = std::async(std::launch::async, [this, ciphertext]() {
+            auto mapping = generateMapping(ciphertext);
+            auto annealed = simulatedAnnealing(mapping, ciphertext, maxIterations / 4);
+            double score = scoreMapping(annealed, ciphertext);
+            return std::make_pair(annealed, score);
+        });
+        
+        // Collect results and find the best mapping
+        auto [mapping1, score1] = future1.get();
+        auto [mapping2, score2] = future2.get();
+        auto [mapping3, score3] = future3.get();
+        
+        printVerbose("Parallel optimization results:");
+        printVerbose("  Bigram improvement: " + std::to_string(score1));
+        printVerbose("  Hill climbing: " + std::to_string(score2));
+        printVerbose("  Simulated annealing: " + std::to_string(score3));
+        
+        // Choose the best mapping
+        if (score1 >= score2 && score1 >= score3) {
+            bestMapping = mapping1;
+            printVerbose("Selected bigram improvement result");
+        } else if (score2 >= score3) {
+            bestMapping = mapping2;
+            printVerbose("Selected hill climbing result");
+        } else {
+            bestMapping = mapping3;
+            printVerbose("Selected simulated annealing result");
+        }
     }
     
     std::string result = applyMapping(ciphertext, bestMapping);

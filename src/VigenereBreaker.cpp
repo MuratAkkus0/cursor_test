@@ -7,6 +7,9 @@
 #include <iomanip>
 #include <cmath>
 #include <set>
+#include <thread>
+#include <future>
+#include <mutex>
 
 VigenereBreaker::VigenereBreaker() 
     : minKeyLength(2), maxKeyLength(20), minSubstringLength(3) {
@@ -37,12 +40,14 @@ std::string VigenereBreaker::breakCipher(const std::string& ciphertext) {
     
     printVerbose("Found " + std::to_string(candidateKeyLengths.size()) + " candidate key lengths");
     
-    // Step 2: Try each key length and find the best result
+    // Step 2: Try each key length in parallel and find the best result
     std::string bestResult = "";
     double bestScore = 0.0;
     std::string bestKey = "";
     
-    for (int keyLength : candidateKeyLengths) {
+    if (candidateKeyLengths.size() == 1) {
+        // Single key length - no need for threading
+        int keyLength = candidateKeyLengths[0];
         printVerbose("Testing key length: " + std::to_string(keyLength));
         
         std::string key = findKey(ciphertext, keyLength);
@@ -51,11 +56,46 @@ std::string VigenereBreaker::breakCipher(const std::string& ciphertext) {
         
         printVerbose("Key: \"" + key + "\", Score: " + std::to_string(score));
         
-        if (score > bestScore) {
-            bestScore = score;
-            bestResult = decrypted;
-            bestKey = key;
+        bestScore = score;
+        bestResult = decrypted;
+        bestKey = key;
+    } else {
+        // Multiple key lengths - use parallel processing
+        const int numThreads = std::min(static_cast<int>(candidateKeyLengths.size()), 
+                                        static_cast<int>(std::thread::hardware_concurrency()));
+        
+        printVerbose("Testing " + std::to_string(candidateKeyLengths.size()) + 
+                    " key lengths using " + std::to_string(numThreads) + " threads");
+        
+        std::vector<std::future<std::tuple<std::string, std::string, double, int>>> futures;
+        
+        // Launch parallel tasks for key length testing
+        for (int keyLength : candidateKeyLengths) {
+            auto future = std::async(std::launch::async, [this, ciphertext, keyLength]() {
+                std::string key = findKey(ciphertext, keyLength);
+                std::string decrypted = decrypt(ciphertext, key);
+                double score = scorePlaintext(decrypted);
+                return std::make_tuple(key, decrypted, score, keyLength);
+            });
+            
+            futures.push_back(std::move(future));
         }
+        
+        // Collect results and find the best one
+        for (auto& future : futures) {
+            auto [key, decrypted, score, keyLength] = future.get();
+            
+            printVerbose("Key length " + std::to_string(keyLength) + 
+                        ": Key=\"" + key + "\", Score=" + std::to_string(score));
+            
+            if (score > bestScore) {
+                bestScore = score;
+                bestResult = decrypted;
+                bestKey = key;
+            }
+        }
+        
+        printVerbose("Parallel key length analysis completed");
     }
     
     // Update confidence based on best score

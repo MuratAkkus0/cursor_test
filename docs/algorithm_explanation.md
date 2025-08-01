@@ -32,21 +32,26 @@ std::map<char, double> FrequencyAnalyzer::calculateFrequency(const std::string& 
 ### Key Features
 
 1. **Character Frequency Calculation**
+
    - Counts occurrence of each letter A-Z
    - Normalizes to percentages
    - Ignores non-alphabetic characters
 
 2. **Chi-Squared Test**
+
    ```
    χ² = Σ ((observed - expected)² / expected)
    ```
+
    - Compares observed vs expected frequency distributions
    - Lower values indicate better match to target language
 
 3. **Index of Coincidence (IC)**
+
    ```
    IC = Σ(ni(ni-1)) / (N(N-1))
    ```
+
    - Measures how similar a text is to random text
    - English: ~0.067, Random: ~0.038
    - Key indicator for cipher type classification
@@ -67,6 +72,7 @@ Caesar cipher breaking uses frequency analysis to find the most likely shift val
 ### Implementation Steps
 
 1. **Test All Shifts (0-25)**
+
    ```cpp
    for (int shift = 0; shift < 26; shift++) {
        std::string decrypted = caesarShift(ciphertext, shift);
@@ -75,6 +81,7 @@ Caesar cipher breaking uses frequency analysis to find the most likely shift val
    ```
 
 2. **Scoring System**
+
    - **Frequency Score (50%)**: Chi-squared test against English
    - **IC Score (30%)**: How close IC is to English (~0.067)
    - **Pattern Score (20%)**: Common English words and bigrams
@@ -101,6 +108,7 @@ Substitution cipher breaking is the most complex, using multiple optimization st
 ### Phase 1: Initial Frequency Mapping
 
 1. **Sort Characters by Frequency**
+
    ```cpp
    // Cipher: E->X, T->Y, A->Z (most frequent)
    // English: E, T, A, O, I, N... (expected order)
@@ -131,7 +139,7 @@ while (improvement_found) {
 for (iteration = 0; iteration < max_iterations; iteration++) {
     neighbor = generateNeighborMapping(current);
     delta = score(neighbor) - score(current);
-    
+
     if (delta > 0 || random() < exp(delta / temperature)) {
         current = neighbor;
     }
@@ -144,7 +152,7 @@ for (iteration = 0; iteration < max_iterations; iteration++) {
 Combined scoring using multiple metrics:
 
 ```cpp
-double combinedScore = 
+double combinedScore =
     frequency_score * 0.3 +
     bigram_score * 0.3 +
     trigram_score * 0.2 +
@@ -170,6 +178,7 @@ Vigenère cipher breaking involves two main phases: key length detection and key
 #### Kasiski Examination
 
 1. **Find Repeating Patterns**
+
    ```cpp
    for (substring_length = 3; substring_length <= 10; substring_length++) {
        // Find all occurrences of each substring
@@ -191,6 +200,7 @@ Vigenère cipher breaking involves two main phases: key length detection and key
 #### Index of Coincidence Method
 
 1. **Test Each Possible Key Length**
+
    ```cpp
    for (key_length = 2; key_length <= 20; key_length++) {
        substrings = splitByKeyPosition(text, key_length);
@@ -205,6 +215,7 @@ Vigenère cipher breaking involves two main phases: key length detection and key
 ### Phase 2: Key Recovery
 
 1. **Split Text by Key Positions**
+
    ```cpp
    for (position = 0; position < key_length; position++) {
        substring = extractEveryNthCharacter(text, position, key_length);
@@ -311,7 +322,7 @@ double confidence = (best_score - second_best_score) / best_score;
 // Parallel key testing for Caesar
 std::vector<std::future<double>> futures;
 for (int key = 0; key < 26; key++) {
-    futures.push_back(std::async(std::launch::async, 
+    futures.push_back(std::async(std::launch::async,
         [&](int k) { return testKey(k); }, key));
 }
 ```
@@ -319,6 +330,7 @@ for (int key = 0; key < 26; key++) {
 ### Memory Optimization
 
 1. **String Operations**
+
    - Pre-allocated string reservations
    - In-place character modifications where possible
    - Efficient substring handling
@@ -331,6 +343,7 @@ for (int key = 0; key < 26; key++) {
 ### Algorithmic Optimizations
 
 1. **Early Termination**
+
    ```cpp
    if (current_score > threshold && confidence > 0.9) {
        break; // Early termination for high-confidence results
@@ -338,6 +351,7 @@ for (int key = 0; key < 26; key++) {
    ```
 
 2. **Adaptive Iterations**
+
    ```cpp
    int iterations = std::min(max_iterations, text.length() * complexity_factor);
    ```
@@ -353,12 +367,12 @@ for (int key = 0; key < 26; key++) {
 
 ### Performance Benchmarks
 
-| Cipher Type | Time (1KB) | Memory | Success Rate |
-|-------------|------------|--------|--------------|
-| Caesar | <100ms | <1MB | 98%+ |
-| Substitution | <5s | <10MB | 85%+ |
-| Vigenère | <10s | <5MB | 75%+ |
-| Auto-Detection | <1s | <2MB | 90%+ |
+| Cipher Type    | Time (1KB) | Memory | Success Rate |
+| -------------- | ---------- | ------ | ------------ |
+| Caesar         | <100ms     | <1MB   | 98%+         |
+| Substitution   | <5s        | <10MB  | 85%+         |
+| Vigenère       | <10s       | <5MB   | 75%+         |
+| Auto-Detection | <1s        | <2MB   | 90%+         |
 
 ### Test Coverage
 
@@ -374,16 +388,19 @@ for (int key = 0; key < 26; key++) {
 ### Potential Improvements
 
 1. **Additional Cipher Types**
+
    - Hill Cipher
    - Playfair Cipher
    - Transposition Ciphers
 
 2. **Machine Learning Integration**
+
    - Neural network-based pattern recognition
    - Adaptive learning from successful breaks
    - Automated parameter tuning
 
 3. **Performance Enhancements**
+
    - GPU acceleration for parallel processing
    - Advanced caching strategies
    - Distributed computing support
