@@ -2,6 +2,7 @@
 #include "Utils.h"
 #include "CaesarBreaker.h"
 #include "SubstitutionBreaker.h"
+#include "VigenereBreaker.h"
 #include <iostream>
 #include <chrono>
 #include <iomanip>
@@ -52,7 +53,7 @@ std::unique_ptr<CipherBreaker> createCipherBreaker(const std::string& cipherType
     } else if (cipherType == "substitution") {
         return std::make_unique<SubstitutionBreaker>();
     } else if (cipherType == "vigenere") {
-        // return std::make_unique<VigenereBreaker>(); // Phase 4
+        return std::make_unique<VigenereBreaker>();
     }
     
     return nullptr;

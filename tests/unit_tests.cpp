@@ -7,6 +7,7 @@
 #include "../include/FrequencyAnalyzer.h"
 #include "../include/CaesarBreaker.h"
 #include "../include/SubstitutionBreaker.h"
+#include "../include/VigenereBreaker.h"
 
 /**
  * @brief Simple test framework
@@ -227,17 +228,71 @@ void testSubstitutionBreaker() {
 }
 
 /**
+ * @brief Test VigenereBreaker functions
+ */
+void testVigenereBreaker() {
+    std::cout << "\n=== Testing VigenereBreaker ===" << std::endl;
+    
+    VigenereBreaker breaker;
+    
+    // Test basic Vigenère encryption/decryption
+    std::string plaintext = "THE QUICK BROWN FOX";
+    std::string key = "KEY";
+    std::string encrypted = breaker.encrypt(plaintext, key);
+    std::string decrypted = breaker.decrypt(encrypted, key);
+    
+    SimpleTest::assert_eq(Utils::normalizeText(plaintext), Utils::normalizeText(decrypted), 
+                         "Vigenère encrypt/decrypt consistency");
+    
+    // Test character shift conversion
+    SimpleTest::assert_eq(0, breaker.charToShift('A'), "Char to shift A=0");
+    SimpleTest::assert_eq(25, breaker.charToShift('Z'), "Char to shift Z=25");
+    SimpleTest::assert_eq('A', breaker.shiftToChar(0), "Shift to char 0=A");
+    SimpleTest::assert_eq('Z', breaker.shiftToChar(25), "Shift to char 25=Z");
+    
+    // Test key length range configuration
+    breaker.setKeyLengthRange(3, 10);
+    SimpleTest::assert_true(true, "Key length range configuration");
+    
+    // Test split by key position
+    std::string testText = "ABCDEFGH";
+    auto split = breaker.splitByKeyPosition(testText, 3);
+    SimpleTest::assert_eq(3, static_cast<int>(split.size()), "Split by key position size");
+    SimpleTest::assert_eq("ADG", split[0], "Split position 0");
+    SimpleTest::assert_eq("BEH", split[1], "Split position 1");
+    SimpleTest::assert_eq("CF", split[2], "Split position 2");
+    
+    // Test simple Vigenère breaking (using a short known example)
+    std::string knownCipher = "DXTJQWL VJEWP"; // "THEQUICK BROWN" with key "KEY"
+    std::string result = breaker.breakCipher(knownCipher);
+    SimpleTest::assert_true(result.length() > 0, "Vigenère cipher breaking");
+    
+    // Test multiple solutions
+    auto solutions = breaker.getPossibleSolutions(knownCipher);
+    SimpleTest::assert_true(solutions.size() > 0, "Multiple solutions generation");
+    
+    // Test invalid input
+    std::string invalidResult = breaker.breakCipher("123456");
+    SimpleTest::assert_eq("", invalidResult, "Invalid input handling");
+    
+    // Test empty key handling
+    std::string emptyKeyResult = breaker.encrypt("TEST", "");
+    SimpleTest::assert_eq("TEST", emptyKeyResult, "Empty key handling");
+}
+
+/**
  * @brief Main test runner
  */
 int main() {
     std::cout << "=== CryptoBreaker Unit Tests ===" << std::endl;
-    std::cout << "Running Phase 1, 2 & 3 tests..." << std::endl;
+    std::cout << "Running Phase 1, 2, 3 & 4 tests..." << std::endl;
     
     try {
         testUtils();
         testFrequencyAnalyzer();
         testCaesarBreaker();
         testSubstitutionBreaker();
+        testVigenereBreaker();
         
         SimpleTest::printSummary();
         

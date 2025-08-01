@@ -9,9 +9,9 @@
 #include "CipherBreaker.h"
 #include "CaesarBreaker.h"
 #include "SubstitutionBreaker.h"
+#include "VigenereBreaker.h"
 
-// Forward declarations for cipher breaker classes (will be implemented in later phases)
-class VigenereBreaker;
+// All cipher breakers now implemented!
 
 /**
  * @brief Displays the main menu
@@ -327,11 +327,12 @@ void handleSubstitutionBreaking() {
 }
 
 /**
- * @brief Placeholder for Vigenère cipher breaking (Phase 4)
+ * @brief Handles Vigenère cipher breaking with advanced key detection
  */
 void handleVigenereBreaking() {
     std::cout << "\n=== Vigenère Cipher Breaking ===" << std::endl;
-    std::cout << "This feature will be implemented in Phase 4." << std::endl;
+    std::cout << "Advanced polyalphabetic cipher analysis using Kasiski examination and IC analysis." << std::endl;
+    std::cout << "Note: Vigenère analysis requires longer texts for reliable results." << std::endl;
     
     std::string input = getUserInput();
     if (!Utils::isValidInput(input)) {
@@ -339,7 +340,144 @@ void handleVigenereBreaking() {
         return;
     }
     
-    performFrequencyAnalysis(input);
+    if (input.length() < 50) {
+        std::cout << "\nWarning: Text is quite short (" << input.length() 
+                  << " characters). Vigenère analysis works best with 100+ characters." << std::endl;
+        std::cout << "Continue anyway? (y/n): ";
+        char choice;
+        std::cin >> choice;
+        std::cin.ignore();
+        if (choice != 'y' && choice != 'Y') {
+            return;
+        }
+    }
+    
+    // Create Vigenère breaker
+    auto vigenereBreaker = createCipherBreaker("vigenere");
+    if (!vigenereBreaker) {
+        std::cout << "Error: Could not create Vigenère breaker instance." << std::endl;
+        return;
+    }
+    
+    // Configure key length range
+    std::cout << "\nKey length configuration:" << std::endl;
+    std::cout << "1. Use default range (2-20)" << std::endl;
+    std::cout << "2. Specify custom range" << std::endl;
+    std::cout << "Enter choice (1-2): ";
+    
+    int rangeChoice;
+    std::cin >> rangeChoice;
+    std::cin.ignore();
+    
+    auto vigBreaker = dynamic_cast<VigenereBreaker*>(vigenereBreaker.get());
+    if (vigBreaker && rangeChoice == 2) {
+        std::cout << "Enter minimum key length (2-10): ";
+        int minLen;
+        std::cin >> minLen;
+        std::cout << "Enter maximum key length (5-20): ";
+        int maxLen;
+        std::cin >> maxLen;
+        std::cin.ignore();
+        
+        vigBreaker->setKeyLengthRange(std::max(2, minLen), std::min(20, maxLen));
+        std::cout << "Key length range set to " << std::max(2, minLen) 
+                  << "-" << std::min(20, maxLen) << std::endl;
+    }
+    
+    // Enable verbose mode option
+    std::cout << "\nWould you like verbose output to see the analysis process? (y/n): ";
+    char verbose;
+    std::cin >> verbose;
+    std::cin.ignore();
+    
+    if (verbose == 'y' || verbose == 'Y') {
+        vigenereBreaker->setVerbose(true);
+    }
+    
+    // Perform analysis
+    std::cout << "\nAnalyzing Vigenère cipher..." << std::endl;
+    std::cout << "This involves key length detection and Caesar analysis for each position..." << std::endl;
+    
+    auto start = std::chrono::high_resolution_clock::now();
+    
+    std::string result = vigenereBreaker->breakCipher(input);
+    
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    
+    // Display results
+    std::cout << "\n=== Vigenère Analysis Results ===" << std::endl;
+    std::cout << "Analysis time: " << duration.count() << " ms" << std::endl;
+    std::cout << "Confidence: " << std::fixed << std::setprecision(1) 
+              << vigenereBreaker->getConfidence() << "%" << std::endl;
+    
+    if (!result.empty()) {
+        std::cout << "\nMost likely plaintext:" << std::endl;
+        std::cout << "\"" << result << "\"" << std::endl;
+        
+        // Show alternative solutions
+        std::cout << "\nAlternative solutions:" << std::endl;
+        auto solutions = vigenereBreaker->getPossibleSolutions(input);
+        for (size_t i = 0; i < std::min(size_t(3), solutions.size()); i++) {
+            std::string preview = solutions[i].substr(0, std::min(80, static_cast<int>(solutions[i].length())));
+            std::cout << (i + 1) << ". \"" << preview;
+            if (solutions[i].length() > 80) std::cout << "...";
+            std::cout << "\"" << std::endl;
+        }
+        
+        // Show analysis details if verbose
+        if (vigBreaker && verbose == 'y') {
+            auto analysisResults = vigBreaker->getAnalysisResults();
+            
+            std::cout << "\n=== Analysis Details ===" << std::endl;
+            
+            if (analysisResults.find("kasiski") != analysisResults.end()) {
+                std::cout << "Kasiski Examination Results (top 3):" << std::endl;
+                auto kasiskiResults = analysisResults["kasiski"];
+                for (size_t i = 0; i < std::min(size_t(3), kasiskiResults.size()); i++) {
+                    std::cout << "  Length " << kasiskiResults[i].first 
+                              << ": Score " << std::fixed << std::setprecision(3) 
+                              << kasiskiResults[i].second << std::endl;
+                }
+            }
+            
+            if (analysisResults.find("ic") != analysisResults.end()) {
+                std::cout << "Index of Coincidence Results (top 3):" << std::endl;
+                auto icResults = analysisResults["ic"];
+                for (size_t i = 0; i < std::min(size_t(3), icResults.size()); i++) {
+                    std::cout << "  Length " << icResults[i].first 
+                              << ": IC " << std::fixed << std::setprecision(4) 
+                              << icResults[i].second << std::endl;
+                }
+            }
+        }
+    } else {
+        std::cout << "\nNo reliable solution found. Possible reasons:" << std::endl;
+        std::cout << "- Text may be too short for reliable analysis" << std::endl;
+        std::cout << "- Key length may be outside the search range" << std::endl;
+        std::cout << "- Text may not be a Vigenère cipher" << std::endl;
+        std::cout << "- Text may contain too much noise or non-English content" << std::endl;
+    }
+    
+    // Ask if user wants to save result
+    if (!result.empty()) {
+        std::cout << "\nSave result to file? (y/n): ";
+        char save;
+        std::cin >> save;
+        std::cin.ignore();
+        
+        if (save == 'y' || save == 'Y') {
+            std::cout << "Enter filename: ";
+            std::string filename;
+            std::getline(std::cin, filename);
+            
+            if (Utils::writeFile(filename, result)) {
+                std::cout << "Result saved to " << filename << std::endl;
+            } else {
+                std::cout << "Error saving file." << std::endl;
+            }
+        }
+    }
 }
 
 /**
