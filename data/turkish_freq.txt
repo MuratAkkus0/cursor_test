@@ -1,0 +1,28 @@
+# Turkish letter frequencies (%)
+# Source: Turkish language frequency analysis
+A,11.92
+B,2.65
+C,0.96
+D,4.87
+E,8.91
+F,0.41
+G,1.24
+H,1.16
+I,8.60
+J,0.00
+K,4.68
+L,5.92
+M,3.75
+N,7.23
+O,2.72
+P,0.84
+Q,0.00
+R,6.92
+S,3.01
+T,5.71
+U,3.39
+V,0.95
+W,0.00
+X,0.00
+Y,3.34
+Z,1.52
