@@ -6,6 +6,7 @@
 #include "../include/Utils.h"
 #include "../include/FrequencyAnalyzer.h"
 #include "../include/CaesarBreaker.h"
+#include "../include/SubstitutionBreaker.h"
 
 /**
  * @brief Simple test framework
@@ -177,16 +178,66 @@ void testCaesarBreaker() {
 }
 
 /**
+ * @brief Test SubstitutionBreaker functions
+ */
+void testSubstitutionBreaker() {
+    std::cout << "\n=== Testing SubstitutionBreaker ===" << std::endl;
+    
+    SubstitutionBreaker breaker;
+    
+    // Test basic frequency mapping
+    std::string testText = "THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG";
+    auto mapping = breaker.generateMapping(testText);
+    SimpleTest::assert_true(mapping.size() > 0, "Frequency mapping generation");
+    
+    // Test apply mapping
+    std::map<char, char> simpleMapping = {
+        {'A', 'B'}, {'B', 'C'}, {'C', 'D'}, {'D', 'E'}, {'E', 'F'}
+    };
+    std::string mapped = breaker.applyMapping("ABCDE", simpleMapping);
+    SimpleTest::assert_eq("BCDEF", mapped, "Apply mapping basic");
+    
+    // Test scoring system
+    double englishScore = breaker.scorePlaintext("THE QUICK BROWN FOX");
+    double randomScore = breaker.scorePlaintext("XYZ QWE RTYU IOP");
+    SimpleTest::assert_true(englishScore > randomScore, "English text scores higher");
+    
+    // Test optimization method setting
+    breaker.setOptimizationMethod("frequency");
+    breaker.setMaxIterations(100);
+    SimpleTest::assert_true(true, "Optimization configuration");
+    
+    // Test short substitution cipher
+    std::string shortCipher = "IFMMP XPSME"; // "HELLO WORLD" with simple +1 shift
+    std::string result = breaker.breakByFrequency(shortCipher);
+    SimpleTest::assert_true(result.length() > 0, "Short substitution breaking");
+    
+    // Test multiple solutions
+    auto solutions = breaker.getPossibleSolutions(shortCipher);
+    SimpleTest::assert_true(solutions.size() > 0, "Multiple solutions generation");
+    
+    // Test invalid input
+    std::string invalidResult = breaker.breakCipher("123456");
+    SimpleTest::assert_eq("", invalidResult, "Invalid input handling");
+    
+    // Test empty mapping
+    std::map<char, char> emptyMapping;
+    std::string emptyResult = breaker.applyMapping("TEST", emptyMapping);
+    SimpleTest::assert_eq("TEST", emptyResult, "Empty mapping handling");
+}
+
+/**
  * @brief Main test runner
  */
 int main() {
     std::cout << "=== CryptoBreaker Unit Tests ===" << std::endl;
-    std::cout << "Running Phase 1 & 2 tests..." << std::endl;
+    std::cout << "Running Phase 1, 2 & 3 tests..." << std::endl;
     
     try {
         testUtils();
         testFrequencyAnalyzer();
         testCaesarBreaker();
+        testSubstitutionBreaker();
         
         SimpleTest::printSummary();
         

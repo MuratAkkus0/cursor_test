@@ -8,9 +8,9 @@
 #include "FrequencyAnalyzer.h"
 #include "CipherBreaker.h"
 #include "CaesarBreaker.h"
+#include "SubstitutionBreaker.h"
 
 // Forward declarations for cipher breaker classes (will be implemented in later phases)
-class SubstitutionBreaker;
 class VigenereBreaker;
 
 /**
@@ -211,11 +211,12 @@ void handleCaesarBreaking() {
 }
 
 /**
- * @brief Placeholder for Substitution cipher breaking (Phase 3)
+ * @brief Handles Substitution cipher breaking with advanced optimization
  */
 void handleSubstitutionBreaking() {
     std::cout << "\n=== Substitution Cipher Breaking ===" << std::endl;
-    std::cout << "This feature will be implemented in Phase 3." << std::endl;
+    std::cout << "Advanced substitution cipher analysis using frequency analysis and optimization." << std::endl;
+    std::cout << "Warning: This process may take longer than Caesar cipher breaking." << std::endl;
     
     std::string input = getUserInput();
     if (!Utils::isValidInput(input)) {
@@ -223,7 +224,106 @@ void handleSubstitutionBreaking() {
         return;
     }
     
-    performFrequencyAnalysis(input);
+    // Create Substitution breaker
+    auto substitutionBreaker = createCipherBreaker("substitution");
+    if (!substitutionBreaker) {
+        std::cout << "Error: Could not create Substitution breaker instance." << std::endl;
+        return;
+    }
+    
+    // Get optimization method preference
+    std::cout << "\nSelect optimization method:" << std::endl;
+    std::cout << "1. Frequency analysis only (fast)" << std::endl;
+    std::cout << "2. Hill climbing optimization (medium)" << std::endl;
+    std::cout << "3. Simulated annealing (slow, best quality)" << std::endl;
+    std::cout << "4. Hybrid approach (recommended)" << std::endl;
+    std::cout << "Enter choice (1-4): ";
+    
+    int methodChoice;
+    std::cin >> methodChoice;
+    std::cin.ignore();
+    
+    auto substBreaker = dynamic_cast<SubstitutionBreaker*>(substitutionBreaker.get());
+    if (substBreaker) {
+        switch (methodChoice) {
+            case 1: substBreaker->setOptimizationMethod("frequency"); break;
+            case 2: substBreaker->setOptimizationMethod("hill_climbing"); break;
+            case 3: substBreaker->setOptimizationMethod("simulated_annealing"); break;
+            case 4: 
+            default: substBreaker->setOptimizationMethod("hybrid"); break;
+        }
+    }
+    
+    // Enable verbose mode option
+    std::cout << "\nWould you like verbose output? (y/n): ";
+    char verbose;
+    std::cin >> verbose;
+    std::cin.ignore();
+    
+    if (verbose == 'y' || verbose == 'Y') {
+        substitutionBreaker->setVerbose(true);
+    }
+    
+    // Perform analysis
+    std::cout << "\nAnalyzing Substitution cipher..." << std::endl;
+    std::cout << "This may take several seconds or minutes depending on text length and method..." << std::endl;
+    
+    auto start = std::chrono::high_resolution_clock::now();
+    
+    std::string result = substitutionBreaker->breakCipher(input);
+    
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    
+    // Display results
+    std::cout << "\n=== Substitution Analysis Results ===" << std::endl;
+    std::cout << "Analysis time: " << duration.count() << " ms" << std::endl;
+    std::cout << "Confidence: " << std::fixed << std::setprecision(1) 
+              << substitutionBreaker->getConfidence() << "%" << std::endl;
+    
+    std::cout << "\nMost likely plaintext:" << std::endl;
+    std::cout << "\"" << result << "\"" << std::endl;
+    
+    // Show alternative solutions
+    std::cout << "\nAlternative solutions:" << std::endl;
+    auto solutions = substitutionBreaker->getPossibleSolutions(input);
+    for (size_t i = 0; i < std::min(size_t(3), solutions.size()); i++) {
+        std::string preview = solutions[i].substr(0, std::min(60, static_cast<int>(solutions[i].length())));
+        std::cout << (i + 1) << ". \"" << preview;
+        if (solutions[i].length() > 60) std::cout << "...";
+        std::cout << "\"" << std::endl;
+    }
+    
+    // Show optimization history if available
+    if (substBreaker && verbose == 'y') {
+        auto history = substBreaker->getOptimizationHistory();
+        if (!history.empty()) {
+            std::cout << "\nOptimization History (last 5 improvements):" << std::endl;
+            int count = 0;
+            for (auto it = history.rbegin(); it != history.rend() && count < 5; ++it, ++count) {
+                std::cout << "Iteration " << it->first << ": Score " 
+                         << std::fixed << std::setprecision(4) << it->second << std::endl;
+            }
+        }
+    }
+    
+    // Ask if user wants to save result
+    std::cout << "\nSave result to file? (y/n): ";
+    char save;
+    std::cin >> save;
+    std::cin.ignore();
+    
+    if (save == 'y' || save == 'Y') {
+        std::cout << "Enter filename: ";
+        std::string filename;
+        std::getline(std::cin, filename);
+        
+        if (Utils::writeFile(filename, result)) {
+            std::cout << "Result saved to " << filename << std::endl;
+        } else {
+            std::cout << "Error saving file." << std::endl;
+        }
+    }
 }
 
 /**
