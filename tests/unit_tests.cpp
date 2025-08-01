@@ -5,6 +5,7 @@
 // Include our headers
 #include "../include/Utils.h"
 #include "../include/FrequencyAnalyzer.h"
+#include "../include/CaesarBreaker.h"
 
 /**
  * @brief Simple test framework
@@ -23,6 +24,18 @@ public:
             std::cout << "❌ FAIL: " << testName << std::endl;
             std::cout << "   Expected: '" << expected << "'" << std::endl;
             std::cout << "   Actual:   '" << actual << "'" << std::endl;
+        }
+    }
+    
+    static void assert_eq(int expected, int actual, const std::string& testName) {
+        testsRun++;
+        if (expected == actual) {
+            std::cout << "✅ PASS: " << testName << std::endl;
+            testsPassed++;
+        } else {
+            std::cout << "❌ FAIL: " << testName << std::endl;
+            std::cout << "   Expected: " << expected << std::endl;
+            std::cout << "   Actual:   " << actual << std::endl;
         }
     }
     
@@ -115,15 +128,65 @@ void testFrequencyAnalyzer() {
 }
 
 /**
+ * @brief Test CaesarBreaker functions
+ */
+void testCaesarBreaker() {
+    std::cout << "\n=== Testing CaesarBreaker ===" << std::endl;
+    
+    CaesarBreaker breaker;
+    
+    // Test basic Caesar encryption/decryption
+    std::string plaintext = "HELLO WORLD";
+    std::string encrypted = breaker.encrypt(plaintext, 3);
+    std::string decrypted = breaker.decrypt(encrypted, 3);
+    
+    SimpleTest::assert_eq(plaintext, Utils::normalizeText(decrypted), "Caesar encrypt/decrypt consistency");
+    
+    // Test known Caesar cipher (ROT13)
+    std::string rot13_cipher = "URYYB JBEYQ";
+    std::string rot13_plain = breaker.decrypt(rot13_cipher, 13);
+    SimpleTest::assert_eq("HELLO WORLD", Utils::normalizeText(rot13_plain), "ROT13 decryption");
+    
+    // Test Caesar breaking with known plaintext
+    std::string testText = "THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG";
+    std::string caesarEncrypted = breaker.encrypt(testText, 7);
+    
+    int foundKey = breaker.findBestKey(caesarEncrypted);
+    SimpleTest::assert_eq(7, foundKey, "Caesar key detection");
+    
+    std::string brokenText = breaker.breakCipher(caesarEncrypted);
+    SimpleTest::assert_eq(Utils::normalizeText(testText), Utils::normalizeText(brokenText), "Caesar cipher breaking");
+    
+    // Test confidence scoring
+    breaker.breakCipher(caesarEncrypted);
+    SimpleTest::assert_true(breaker.getConfidence() > 50.0, "Caesar confidence scoring");
+    
+    // Test multiple solutions
+    auto solutions = breaker.getPossibleSolutions(caesarEncrypted);
+    SimpleTest::assert_true(solutions.size() > 0, "Multiple solutions generation");
+    
+    // Test short text handling
+    std::string shortText = "HI";
+    std::string shortResult = breaker.breakCipher(shortText);
+    SimpleTest::assert_true(shortResult.empty() || shortResult == shortText, "Short text handling");
+    
+    // Test invalid input
+    std::string invalidInput = "123456789";
+    std::string invalidResult = breaker.breakCipher(invalidInput);
+    SimpleTest::assert_eq("", invalidResult, "Invalid input handling");
+}
+
+/**
  * @brief Main test runner
  */
 int main() {
     std::cout << "=== CryptoBreaker Unit Tests ===" << std::endl;
-    std::cout << "Running Phase 1 tests..." << std::endl;
+    std::cout << "Running Phase 1 & 2 tests..." << std::endl;
     
     try {
         testUtils();
         testFrequencyAnalyzer();
+        testCaesarBreaker();
         
         SimpleTest::printSummary();
         

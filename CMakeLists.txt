@@ -17,6 +17,7 @@ set(SOURCES
     src/main.cpp
     src/Utils.cpp
     src/FrequencyAnalyzer.cpp
+    src/CipherBreaker.cpp
     src/CaesarBreaker.cpp
     src/SubstitutionBreaker.cpp
     src/VigenereBreaker.cpp
@@ -49,6 +50,7 @@ set(TEST_SOURCES
     tests/unit_tests.cpp
     src/Utils.cpp
     src/FrequencyAnalyzer.cpp
+    src/CipherBreaker.cpp
     src/CaesarBreaker.cpp
     src/SubstitutionBreaker.cpp
     src/VigenereBreaker.cpp

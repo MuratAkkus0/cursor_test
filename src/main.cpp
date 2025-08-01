@@ -7,9 +7,9 @@
 #include "Utils.h"
 #include "FrequencyAnalyzer.h"
 #include "CipherBreaker.h"
+#include "CaesarBreaker.h"
 
 // Forward declarations for cipher breaker classes (will be implemented in later phases)
-class CaesarBreaker;
 class SubstitutionBreaker;
 class VigenereBreaker;
 
@@ -134,12 +134,11 @@ void performFrequencyAnalysis(const std::string& text) {
 }
 
 /**
- * @brief Placeholder for Caesar cipher breaking (Phase 2)
+ * @brief Handles Caesar cipher breaking with full automation
  */
 void handleCaesarBreaking() {
     std::cout << "\n=== Caesar Cipher Breaking ===" << std::endl;
-    std::cout << "This feature will be implemented in Phase 2." << std::endl;
-    std::cout << "For now, you can use frequency analysis to manually determine the shift." << std::endl;
+    std::cout << "Automatic Caesar cipher analysis using frequency analysis." << std::endl;
     
     std::string input = getUserInput();
     if (!Utils::isValidInput(input)) {
@@ -147,11 +146,68 @@ void handleCaesarBreaking() {
         return;
     }
     
-    performFrequencyAnalysis(input);
+    // Create Caesar breaker
+    auto caesarBreaker = createCipherBreaker("caesar");
+    if (!caesarBreaker) {
+        std::cout << "Error: Could not create Caesar breaker instance." << std::endl;
+        return;
+    }
     
-    // Simple manual Caesar demonstration
-    std::cout << "\nManual Caesar Analysis:" << std::endl;
-    std::cout << "Try different shift values (0-25) to see if meaningful text emerges." << std::endl;
+    // Enable verbose mode for detailed output
+    std::cout << "\nWould you like verbose output? (y/n): ";
+    char verbose;
+    std::cin >> verbose;
+    std::cin.ignore();
+    
+    if (verbose == 'y' || verbose == 'Y') {
+        caesarBreaker->setVerbose(true);
+    }
+    
+    // Perform analysis
+    std::cout << "\nAnalyzing Caesar cipher..." << std::endl;
+    auto start = std::chrono::high_resolution_clock::now();
+    
+    std::string result = caesarBreaker->breakCipher(input);
+    
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    
+    // Display results
+    std::cout << "\n=== Caesar Analysis Results ===" << std::endl;
+    std::cout << "Analysis time: " << duration.count() << " ms" << std::endl;
+    std::cout << "Confidence: " << std::fixed << std::setprecision(1) 
+              << caesarBreaker->getConfidence() << "%" << std::endl;
+    
+    std::cout << "\nMost likely plaintext:" << std::endl;
+    std::cout << "\"" << result << "\"" << std::endl;
+    
+    // Show alternative solutions
+    std::cout << "\nTop 3 alternative solutions:" << std::endl;
+    auto solutions = caesarBreaker->getPossibleSolutions(input);
+    for (size_t i = 0; i < std::min(size_t(3), solutions.size()); i++) {
+        std::string preview = solutions[i].substr(0, std::min(50, static_cast<int>(solutions[i].length())));
+        std::cout << (i + 1) << ". \"" << preview;
+        if (solutions[i].length() > 50) std::cout << "...";
+        std::cout << "\"" << std::endl;
+    }
+    
+    // Ask if user wants to save result
+    std::cout << "\nSave result to file? (y/n): ";
+    char save;
+    std::cin >> save;
+    std::cin.ignore();
+    
+    if (save == 'y' || save == 'Y') {
+        std::cout << "Enter filename: ";
+        std::string filename;
+        std::getline(std::cin, filename);
+        
+        if (Utils::writeFile(filename, result)) {
+            std::cout << "Result saved to " << filename << std::endl;
+        } else {
+            std::cout << "Error saving file." << std::endl;
+        }
+    }
 }
 
 /**

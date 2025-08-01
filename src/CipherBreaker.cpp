@@ -1,5 +1,6 @@
 #include "CipherBreaker.h"
 #include "Utils.h"
+#include "CaesarBreaker.h"
 #include <iostream>
 #include <chrono>
 #include <iomanip>
@@ -43,17 +44,15 @@ void CipherBreaker::printVerbose(const std::string& message) const {
     }
 }
 
-// Factory function implementation (placeholder for now)
+// Factory function implementation
 std::unique_ptr<CipherBreaker> createCipherBreaker(const std::string& cipherType) {
-    // This will be implemented when we have concrete cipher breakers
     if (cipherType == "caesar") {
-        // return std::make_unique<CaesarBreaker>();
+        return std::make_unique<CaesarBreaker>();
     } else if (cipherType == "substitution") {
-        // return std::make_unique<SubstitutionBreaker>();
+        // return std::make_unique<SubstitutionBreaker>(); // Phase 3
     } else if (cipherType == "vigenere") {
-        // return std::make_unique<VigenereBreaker>();
+        // return std::make_unique<VigenereBreaker>(); // Phase 4
     }
     
-    // For now, return nullptr
     return nullptr;
 }
